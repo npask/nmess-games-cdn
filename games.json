@@ -2,8 +2,6 @@
   {
     "id": "snake",
     "name": "Snake",
-    "maxPlayers": "All",
-    "file": "snake.js",
-    "url":"/game/snake/"
+    "maxPlayers": "All"
   }
 ]
