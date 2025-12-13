@@ -2,6 +2,7 @@
   {
     "id": "snake",
     "name": "Snake",
-    "maxPlayers": "All"
+    "maxPlayers": "All",
+    "publicFiles": ["index.html", "banner.png"]
   }
 ]
