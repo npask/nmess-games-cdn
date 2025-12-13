@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Multiplayer Snake 🐍</title>
+<style>
+body { margin:0; background:#fff; color: black; overflow:hidden; font-family: 'Segoe UI', sans-serif; }
+canvas { display:block; background:#ffffff; }
+#status { position:absolute; top: calc( 7.4vh + 10px ); left:10px; ont-family:sans-serif;padding: 10px 15px;border-radius: 30px; background: #5d5d5d52; backdrop-filter: blur(5px); }
+#renderBlock {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  color: black;
+  font-size: 10em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.homemenu{
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.homemenu img{
+    width: 80%;
+    max-width: 50vw;
+}
+
+.homemenu button{
+    position: relative;
+    background-color: rgb(124, 255, 124);
+    border: 0px;
+    border-radius: 50px;
+    transform: scale(1.5);
+    padding: 10px 50px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.homemenu button:hover{
+    transform: scale(1.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #111;
+    color: #fff;
+  }
+
+  .homemenu{
+    background: #212121; 
+  }
+    
+  canvas{
+    background: #212121; 
+  }
+
+  #renderBlock{
+    background-color: black;
+    color: white;
+  }
+}
+</style>
+</head>
+<body>
+<div class="homemenu">
+    <img src="banner.png">
+    <button onclick="startGame()">Start</button>
+</div>
+<div id="renderBlock" style="display:none">Come back to render the game</div>
+<div id="status">Verbinde…</div>
+<canvas id="game"></canvas>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let socket = null;
+let camX = 0, camY = 0;
+let smoothFactor = 0.05;
+let lastRender = 0;
+let roomId = null;
+let myId = null;
+let players = {};
+let fruits = [];
+let gridSize = 50;
+let cell = 50;
+let checkDrawInterval = setInterval(() => {if(renderedInTheLastTwoSeconds() == false){requestAnimationFrame(draw);}}, 100);
+
+
+// Fullscreen
+function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cell = Math.min(canvas.width, canvas.height) / 20; 
+}
+  
+function startGame(){
+    document.querySelector(".homemenu").style.display = "none"
+    socket = io();
+
+    window.addEventListener("blur", function(){clearInterval(checkDrawInterval); checkDrawInterval = null; document.getElementById("renderBlock").style.display = ""});
+    window.addEventListener("focus", function(){checkDrawInterval = setInterval(() => {if(renderedInTheLastTwoSeconds() == false){requestAnimationFrame(draw);}}, 100);document.getElementById("renderBlock").style.display = "none"});
+    
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // Verbindung
+    socket.on("connect", ()=>{
+        myId = socket.id;
+        document.getElementById("status").textContent="Verbunden ✔️";
+        socket.emit("joinGame",{gameId:"snake"});
+        requestAnimationFrame(draw)
+    });
+
+    socket.on("joinedGame",(data)=>{
+        roomId = data.roomId;
+        document.getElementById("status").textContent=`Im Raum ${roomId} mit ${data.players} Spielern`;
+    });
+
+    socket.on("roomUpdate",(data)=>{
+        document.getElementById("status").textContent=`Spieler im Raum: ${data.players}`;
+    });
+
+    // Server-State
+    socket.on("gameEvent",({type,data})=>{
+        if(type!=="state") return;
+        players = data.players;
+        fruits = data.fruits||[];
+        gridSize = data.grid;
+    });
+
+    // Input
+    window.addEventListener("keydown",(e)=>{
+        if(!roomId) return;
+        const dir = {
+            ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1},
+            ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0},
+            w:{x:0,y:-1}, s:{x:0,y:1}, a:{x:-1,y:0}, d:{x:1,y:0}
+        }[e.key];
+        if(dir) socket.emit("gameEvent",{roomId,type:"input",data:dir});
+    });
+}
+
+  
+
+    // Farbe
+    function colorFromId(id){
+        let h=0; for(let i=0;i<id.length;i++) h=id.charCodeAt(i)+((h<<5)-h);
+        return `hsl(${h%360},80%,60%)`;
+    }
+
+// Draw
+function draw(){
+    lastRender = Date.now();
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(!players[myId]?.body?.length) return;
+
+    const head = players[myId].body[0];
+    const targetX = canvas.width/2 - head.x*cell;
+    const targetY = canvas.height/2 - head.y*cell;
+
+    // Lerp für smoothes Follow
+    camX += (targetX - camX) * smoothFactor;
+    camY += (targetY - camY) * smoothFactor;
+
+    // Früchte
+    ctx.fillStyle="red";
+    for(const f of fruits){
+        ctx.fillRect(f.x*cell+camX,f.y*cell+camY,cell,cell);
+    }
+
+    // Spieler
+    for(const id in players){
+        const snake = players[id];
+        ctx.fillStyle=colorFromId(id);
+        snake.body.forEach((seg,i)=>{
+            ctx.fillRect(seg.x*cell+camX,seg.y*cell+camY,cell,cell);
+            if(i===0 && id===myId){
+                ctx.strokeStyle="#fff";
+                ctx.strokeRect(seg.x*cell+camX,seg.y*cell+camY,cell,cell);
+            }
+        });
+    }
+    requestAnimationFrame(draw);
+}
+    
+function renderedInTheLastTwoSeconds() {
+    return Date.now() - lastRender <= 1000;
+}
+</script>
+</body>
+</html>
