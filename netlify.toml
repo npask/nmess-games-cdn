@@ -1,4 +1,5 @@
-[headers]
+[[headers]]
   for = "/*"
   [headers.values]
-    access-control-allow-origin = "https://nmess.soon.it"
+    Access-Control-Allow-Origin = "https://nmess.soon.it"
+    Referrer-Policy = "no-referrer-when-downgrade"
