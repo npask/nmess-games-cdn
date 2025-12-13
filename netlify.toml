@@ -2,4 +2,4 @@
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "https://nmess.soon.it"
-    Referrer-Policy = "no-referrer-when-downgrade"
+    Access-Control-Allow-Credentials = "true"
