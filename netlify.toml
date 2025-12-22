@@ -1,5 +1,11 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Access-Control-Allow-Origin = "https://nmess.soon.it", "https://nmess.okzk.com"
+    Access-Control-Allow-Origin = "https://nmess.soon.it"
+    Access-Control-Allow-Credentials = "true"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://nmess.okzk.com"
     Access-Control-Allow-Credentials = "true"
