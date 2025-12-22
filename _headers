@@ -1,5 +1,5 @@
 /*
-  Access-Control-Allow-Origin: https://nmess.soon.it
+  Access-Control-Allow-Origin: https://nmess.soon.it, https://nmess.okzk.com
   Access-Control-Allow-Methods: GET, POST, OPTIONS
   Access-Control-Allow-Headers: Content-Type
   Access-Control-Allow-Credentials: true
